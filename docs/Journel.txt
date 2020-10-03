@@ -1,0 +1,191 @@
+7/29
+
+Notes on character class
+
+Font handling
+
+  Should I support external fonts into the class?
+    * Fonts should be provided by the device that is being wrapped
+    * If fonts are not available, perhaps a default font?
+    * If a font is provided it should be compatible with the display
+      - Should a provided font override the display (or default) font? (YES)
+      - Should the devices font be used if a char value does not exist in provided font? (NO)
+        (Multi font displays can be done graphically outside this class)
+
+  How should I treat the combination of PIL fonts that make up the character-set of a display?
+    To enable a wider character-set the character class combines all of the PIL fonts into a single virtual font
+    Should this be done with some kind of wrapper so that it looks like a standard font to the character class?  (YES)
+      - This should be done in a class outside of character
+      - This font wrapper class should allow character class to select the font table that it will default to
+
+
+What is the purpose of this class?  If the display is fully graphical, you'd imaging that the developer would draw directly using the display method.  What is special about the devices where the character class is useful is that they either are native character devices, or they are graphical but have a cell structure within their display (e.g. WEH001602A) that makes displaying fonts larger than their cell structure look odd.
+
+* class must be provided a cell dimension (default 5x8)
+* font(s) must adhere to this dimension (raise exception if device has a character within a font that does not match the cell dimension)
+
+7/30
+
+Still thinking about the character class
+
+  Character wrap.  Currently the class wraps from line to line if the amount of characters on a particular line is exceeded.  Also, if the number of lines that is produced exceeds the display size, an exception is generated.  As a character display this makes sense but gets ugly when we start supporting fonts that have characters larger than the cell dimension.
+  * Should character wrap be configurable? (YES)
+    - Too useful if using a monospaced font
+  * What should default for wrapping be set to? (TO WRAP)
+  * If no-wrap, should we silently allow a line to extend beyond the screen or throw exception (SILENT)
+  * Should we silently allow lines to extend beyond the bottom of the screen or throw exception (SILENT)
+  Argument for no Overflow exception is most graphical displays silently ignore extra data
+
+  8/2
+
+  Started testing my hd44780 class.  Only problem was getting an HD44780 display wired up.  Took two hours to find a potentiometer for the contrast function.
+
+8/12
+
+Notes for re-write of embedded_font
+
+Allows a collection of fonts to be 'embedded' in a device
+
+Uses lazy loading.  Initially only the default font will be loaded.  get_font
+is what will trigger a load of a font from the provided initialization data.  Changing
+the selected font will also cause the new selection to be loaded.
+
+If initialized from FONTDATA will automatically generate a superfont from the
+provided fonts using the default as the master (e.g. highest priority) font
+
+A superfont is a combination of different fonts into a single font with the order
+of precedent if there is a common character being first font to last font.
+
+embedded_font only implements the bare minimum of Pillow font behavior; basically
+only as much as the ImageFont class does.
+
+
+the FONT structure is:
+  name             # name of font
+  sprite_table     # image containing all of the glyphs organized in table format
+                   # in PIL.Image.tobytes format
+  mappings         # dict of unicode to table placement values
+  cell_size        # size of each cell in table
+  glyph_size       # size of each glyph in font (all glyphs must be the same size)
+  xwidth           # Spacing between placement of characters horizontally
+                   # (from start of character to the start of the next character)
+
+the FONTDATA structure is:
+  array of font structures
+
+
+load_font(self, name, font, mappings)
+combine_fonts(self, name, font1, font2 )
+generate_sprite_table(self, font)
+resize_sprite_table(self, font, cell_size)
+save_fonts(self)
+load_fonts(self)
+get_font(self, name)
+font(self, name)
+
+
+
+PIL FONT METRIC
+    xwidth
+    ywidth
+
+    dst is (l, -d - h, w + l, -d)
+      (l,d) are the character offset relative to the origin
+      (w,h) are the size of the glyph
+      dst is a four tuple that defines the upper left and lower right that the glyph
+      will be placed into relative to the character origin.
+      The origin is on the baseline to the bottom left of the bounding box
+
+    src ((x, y), (x+w, y+h)) # location of glyph within sprite table top/left
+    to bottom/right (e.g. if you crop the src you receive the glyph)
+
+
+Initial Methods
+
+init(fontdata, default)
+font_create(name, image, metrics, mapping) # create font from image and metrics table
+font_add(name, font, mapping) # add font from provided PIL compatible font object
+font_load(name, filename) # Load font from file in embedded_font format
+font_combine(name or number, font, mapping) # combine existing font with font from provided PIL compatible font object
+make_metrics(glyph_spacing, glyph_size, page_dimension, xwidth) # make a metrics table with static sizes (don't vary from char to char)
+get_font(number, name) # return a PIL compatible font object
+save(number or name, filename) # save a font to provided filename in embedded_font format
+json(number or name) # return a font in json format
+cbor(number or name) # return a font in cbor format
+get_fontdata() # Return all of the currently embedded fonts in a FONTDATA stucture
+
+getsize(text) # return a tuple containing the size that the provided text would take if rendered in the default font
+getmask(text, mode) # return an image of the text rendered in the default font
+
+@font.setter
+font(number or name)  # Select the current font
+
+@property
+font()  # Return the current font in use
+
+
+def _from_8_to_16(self, data):
+    """
+    Take a list of bytes or bytearray from 8 bit values to 16 bit values
+    """
+    return [self._unsigned_16_to_signed((data[i] << 8) + data[i + 1]) \
+        for i in range(0, len(data), 2)] if data is not None else None
+
+def _unsigned_16_to_signed(self, value):
+    """
+    Convert unsigned 16 bit value to a signed value
+    """
+    return ((value) & 0x7FFF) - (0x8000 & (value))
+
+
+
+8/17
+
+Still working through what to do with embedded_font.
+
+Keep coming back to whether to support:
+* Auto metrics
+* Calculated proportional fonts
+* Remapping of original font values into unused unicode code points
+* How to calculate placement of characters
+* Whether the baseline should be constant for a whole font or just a line of text
+
+ Current thinking...
+
+DECISION:  Have two versions of the class.
+
+embedded_font:  full feature set that allows (and requires) font metrics
+This version will not auto calculate metrics
+
+embedded_font_basic:  subclass of embedded_font.  Only allows fonts where all
+of the glyphs are exactly the same size, use the same xwidth and placement.  This
+fits the use case for the 8px and 10px fonts of the hd44780 and the ws0010.
+This version will auto calculate metrics
+
+DECISION: Calculation of proportional fonts will NOT be part of this release
+
+DECISION: Baseline will be consistent for entire font
+
+Placement:
+  Rough algorithm
+  On font load,  calculate max ascending and descending values for all characters and store
+  font.height and font.baseline (subtracted from height)
+  when placing character
+  cp = -1stchar.dst[0] if 1stchar.dst[0] < 0 else 0
+  for each char:
+    px = char.dst[0] + cp
+    py = char.dst[1] + font.baseline
+    image.paste( (px,py), char.image)
+    cp += char.xwidth
+
+Size:
+  Rough algorithm
+    height = font.height
+  min_col = 0
+  max_col = 0
+  cp = 0
+  For each character
+    min_col = min(min_col, char.dst[0]+cp)
+    max_col = max(max_col, char.w+char.dst[0]+cp)
+    cp += char.xwidth
+  size = (max_col-min_col, height)

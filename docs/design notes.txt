@@ -1,0 +1,93 @@
+Display
+  Widgets
+    Widgets can rely upon other widgets.  This is especially true of canvas widgets
+    Widgets can be active or inactive.  If inactive, the widget should return a blank image that is filled with its background color and is the same size as its last rendered image
+    Widgets must test if they need to re-render themselves
+    Widgets return the rendered image, a boolean to indicate if image has changed or is new, and if the widget is active
+  Canvases
+    Compute the safe widget render order per canvas at startup
+    Widgets on a canvas are specified in order of render in effect giving each a z-value with earlier widgets being rendered below higher widgets
+  Sequences
+    At each interval, iterate list of sequences computing conditions.  Any True's get added to active sequence list (in order)
+    As with widgets on a canvas, sequences are processed in order which implicitly declares a z-value for each sequence
+    While more than one sequence can be active at the same time, only one canvas within a sequence can be active at the same time
+  Scrolling
+    Types:
+      wrap: Content that has scrolled out of display window reappears on the opposite side until the content has fulled scrolled around to beginning
+      fix: Content that has scrolled out of display window remains out of site
+    Gap:
+      Adds additional pixels to the underlying widgets image
+      Used mainly for wrapped types to create a gap between the finish and the start of content
+      Parameters:
+        value:
+          0-1 (float): Specifies percentage of the size of the underlying widget
+          1+ (int): Specifies number of pixels
+        side: which side of image to add gap
+      Structure:
+        (value, side)
+        e.g.
+        (0.2, 'right')
+        (20, 'bottom')
+    Actions:
+      Tells scroll widget what to do
+      Types:
+        Scroll: Commands scrolling to begin.  Requires a direction.
+        Pause: Stops scrolling for a fixed period of time
+      Structure
+        'type', 'end': [ Event1, Event2, ...] # Any triggered event will cause the action to end and the next action to begin
+    Events:
+      Used to determine when to execute the next action
+      Types:
+        Loop: Triggered when scrolling has finished
+        Bound: Triggered when scrolling has reached the edge of the display window
+        Timer: Triggered after defined number of seconds.  Timers begin their countdown when used in an action.
+
+      Structure
+        'type', *args # Args used to pass additional configuration details to event. This is currently only for the timer event
+
+      Processing Flow
+      '''
+      What am I doing?  Scrolling, pausing
+          scrolling
+              Determine based upon speed setting whether a scroll step should be taken (max value 1 step per render, min 0)
+              Determine direction of scroll
+              Update location
+          pausing
+              pass
+
+      Test end conditions
+          Exit:
+              up: if curPos[1]+widget.image.size[1] < 0
+              down: if curPos[1] == self.size[1]
+              right: if curPos[0] == self.size[0]
+              left: if curPos[0]+widget.image.size[0] < 0
+          Enter:
+              up: if curPos[1] + widget.image.size[1] == self.size[1]
+              down: if curPos[1] == 0
+              right: if curPos[0] == 0
+              left: if curPos[0]+widget.image.size[0] == self.size[0]
+          Timer:
+              if time.time > timer
+
+          If any end conditions true
+              actionPos += actionPos if actionPos < len(actionPos)-1 else 0
+              timer = 0
+              NEED TO set for next action
+
+
+      (There is an assumption that the frequency of render will be at or above the speed of scrolling.  If it is not scrolling speed will be reduced to render frequency.  Very low render frequency may also affect the accuracy of pause durations.
+
+      Wrap logic
+      Crop
+      R1 = crop(px,py,wsX,wsY)
+      R2 = crop(0,Py,px,wsY)
+      R3 = crop(Px, 0, wsX, Py)
+      R4 = crop(0,0, Px, Py)
+
+      Merge
+      img.paste(R1, (0, 0) )
+      img.paste(R2, (wsX-px, 0) )
+      img.paste(R3, (0, wsY-py) )
+      img.paste(R4, (wsX-px, wsY-py) )
+
+      '''
