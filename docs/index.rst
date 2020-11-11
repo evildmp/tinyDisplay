@@ -29,9 +29,7 @@
 tinyDisplay
 =======================================
 
-A Python project that implements widgets and screen management for small displays.
-
-
+A Python project (in progress) that implements widgets and screen management for small displays.
 
 .. rst-class:: clearfix row
 
@@ -45,8 +43,8 @@ Documentation for new users (tutorials, step-by-step installation guides, etc)
 
 .. rst-class:: column column2
 
-How to
------------
+:ref:`How-to guides <how-to>`
+------------------------------
 
 Recipes for specific tasks
 
@@ -75,29 +73,8 @@ About the project
 Some general notes about the project.
 
 
-About the project documentation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+..  toctree::
+    :maxdepth: 1
+    :hidden:
 
-Install locally in a virtualenv:
-
-..  code-block:: bash
-
-    cd docs
-    make install
-
-Build HTML:
-
-..  code-block:: bash
-
-    make html
-    open _build/html/index.html
-
-Or, run a documentation server:
-
-..  code-block:: bash
-
-    make run
-
-\ - the documentation will be served at http://localhost:8901
-
-See also :ref:`documentation-standards`.
+    how-to

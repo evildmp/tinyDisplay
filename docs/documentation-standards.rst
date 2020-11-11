@@ -5,7 +5,7 @@
 Documentation standards
 =======================
 
-Our documentation structure is key to its usability. See `The documentation system <https://documentation.divio.com>`_
+The documentation's structure is key to its usability. See `The documentation system <https://documentation.divio.com>`_
 for an explanation of why it's important and how it works.
 
 Column widths
