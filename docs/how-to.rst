@@ -8,10 +8,6 @@ How to install tinyDisplay
 
 tinyDisplay uses `Poetry <https://python-poetry.org/docs/>`_ to manage installation and dependencies.
 
-
-Install tinyDisplay for development purposes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Clone the tinyDisplay repository, and in the repository directory run:
 
 ..  code-block:: bash
