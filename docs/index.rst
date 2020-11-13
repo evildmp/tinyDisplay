@@ -59,8 +59,8 @@ APIs, classes, methods, etc
 
 .. rst-class:: column column2
 
-Background
------------
+:ref:`Background <background>`
+-------------------------------
 
 Underlying concepts, approaches, principles.
 
@@ -78,3 +78,4 @@ Some general notes about the project.
     :hidden:
 
     how-to
+    background
